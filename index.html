@@ -58,6 +58,8 @@
                 <input type="radio" name="renderMethod" id="hex" value="hex"  /><label for="hex"><small>Hexagons</small></label><br/>
                 <input type="radio" name="renderMethod" id="hits" value="hits" /><label for="hits"><small>Documents</small></label>
             </div>
+
+            <p>Features: <span id="count"></span></p>
             <input type="button" id="show_data" value="Show" onclick="showLayer()" />
         </div>
     </fieldset>
@@ -67,6 +69,7 @@
 
 
     let loaded = false;
+    const intFormatter = new Intl.NumberFormat('en-US', { maximumSignificantDigits: 3 });
 
 
     const map = new maplibregl.Map({
@@ -90,6 +93,29 @@
     map.on('load', function () {
         loaded = true;
     });
+
+    map.on('data', counts);
+    map.on('moveend', counts);
+
+    function counts() {
+        const features = map.queryRenderedFeatures();
+        const countEl = document.getElementById('count');
+        const preCount = countEl.textContent;
+        // Features can be single documents or aggregated hex or grid
+        const count = features[0]?.properties.hasOwnProperty('_count') ?
+            features
+                .filter( f => f?.layer?.id == 'layer_fill')
+                .reduce((acc,cur) => acc + cur.properties._count, 0) :
+            features.length;
+
+        if (!count) return;
+        
+        // Render the count
+        const formattedCount = intFormatter.format(count);
+        if (preCount != formattedCount){
+            countEl.textContent = formattedCount;
+        }
+    };
 
     function showLayer() {
         if (!loaded) {
@@ -204,7 +230,6 @@
             ['==', ['geometry-type'], 'Point'],
             ['==', ['geometry-type'], 'MultiPoint'],
         ]);
-
     }
 
 
